@@ -1,6 +1,10 @@
 import jinja2
+import os
+from dotenv import load_dotenv
 
-nb_nodes = 5
+# Charge les variables du fichier .env
+load_dotenv()
+nb_nodes = int(os.getenv("NB_NODES", 5))  # Utilise 5 par défaut si NB_NODES n'est pas défini
 
 template_str = """
 version: '3'

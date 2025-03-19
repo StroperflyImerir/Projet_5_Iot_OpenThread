@@ -3,8 +3,12 @@ import time
 import sys
 import subprocess
 import concurrent.futures
+import os
+from dotenv import load_dotenv
 
-nb_nodes = 5
+# Charge les variables du fichier .env
+load_dotenv()
+nb_nodes = int(os.getenv("NB_NODES", 5))  # Utilise 5 par défaut si NB_NODES n'est pas défini
 
 def send_cmd(proc, cmd, wait=1, prompt=">"):
     """Envoie une commande à un processus interactif et attend le prompt."""
@@ -54,7 +58,7 @@ def get_eui64(container_name, prompt=">"):
       Done
     On renvoie donc la ligne juste avant "Done".
     """
-    print(f"\n📌 Récupération de l'EUI64 pour {container_name}...")
+    # print(f"\n📌 Récupération de l'EUI64 pour {container_name}...")
     try:
         proc = pexpect.spawn(f"docker attach {container_name}", timeout=30)
     except Exception as e:
@@ -82,17 +86,17 @@ def get_eui64(container_name, prompt=">"):
         eui = lines[0].strip()
     else:
         eui = ""
-    print(f"🔹 {container_name} EUI64: {eui}")
+    # print(f"🔹 {container_name} EUI64: {eui}")
     return eui
 
 def add_joiner(leader, joiner_eui, retries=3):
     """Ajoute un joiner depuis le leader, avec retry en cas d'erreur de type NoBufs."""
     for attempt in range(retries):
+        time.sleep(2)
         print(f"🛠 Tentative {attempt+1} pour ajouter le joiner {joiner_eui} depuis ot-node1...")
         output = send_cmd(leader, f"commissioner joiner add {joiner_eui} THREAD 60", wait=3)
         if "NoBufs" in output:
             print(f"❌ Buffer saturé pour {joiner_eui} à la tentative {attempt+1}. Attente et réessai.")
-            time.sleep(2)
         else:
             print(f"✅ Joiner {joiner_eui} ajouté avec succès.")
             return True
@@ -142,6 +146,7 @@ def configure_joiner(leader, node_name, joiner_eui, retries=3):
     max_checks = 5
     state_ok = False
     for i in range(max_checks):
+        time.sleep(2)
         output = send_cmd(joiner, "state", wait=1)
         if "child" in output.lower():
             print(f"✅ {node_name} est bien configuré en child (vérification {i+1}/{max_checks}).")
@@ -149,7 +154,6 @@ def configure_joiner(leader, node_name, joiner_eui, retries=3):
             break
         else:
             print(f"🔄 {node_name} n'est pas encore en 'child' (vérification {i+1}/{max_checks}), attente 2 secondes...")
-            time.sleep(2)
     joiner.close()
     if not state_ok:
         print(f"❌ Erreur : {node_name} n'est toujours pas en 'child' après {max_checks} vérifications.")
