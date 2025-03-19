@@ -1,0 +1,93 @@
+version: '3'
+services:
+  node1:
+    image: openthread/environment:latest
+    container_name: ot-node1
+    network_mode: host
+    command: ["/openthread/build/examples/apps/cli/ot-cli-ftd", "1"]
+    tty: true
+    stdin_open: true
+  node2:
+    image: openthread/environment:latest
+    container_name: ot-node2
+    network_mode: host
+    command: ["/openthread/build/examples/apps/cli/ot-cli-ftd", "2"]
+    tty: true
+    stdin_open: true
+  node3:
+    image: openthread/environment:latest
+    container_name: ot-node3
+    network_mode: host
+    command: ["/openthread/build/examples/apps/cli/ot-cli-ftd", "3"]
+    tty: true
+    stdin_open: true
+  node4:
+    image: openthread/environment:latest
+    container_name: ot-node4
+    network_mode: host
+    command: ["/openthread/build/examples/apps/cli/ot-cli-ftd", "4"]
+    tty: true
+    stdin_open: true
+  node5:
+    image: openthread/environment:latest
+    container_name: ot-node5
+    network_mode: host
+    command: ["/openthread/build/examples/apps/cli/ot-cli-ftd", "5"]
+    tty: true
+    stdin_open: true
+  node6:
+    image: openthread/environment:latest
+    container_name: ot-node6
+    network_mode: host
+    command: ["/openthread/build/examples/apps/cli/ot-cli-ftd", "6"]
+    tty: true
+    stdin_open: true
+  node7:
+    image: openthread/environment:latest
+    container_name: ot-node7
+    network_mode: host
+    command: ["/openthread/build/examples/apps/cli/ot-cli-ftd", "7"]
+    tty: true
+    stdin_open: true
+  node8:
+    image: openthread/environment:latest
+    container_name: ot-node8
+    network_mode: host
+    command: ["/openthread/build/examples/apps/cli/ot-cli-ftd", "8"]
+    tty: true
+    stdin_open: true
+  node9:
+    image: openthread/environment:latest
+    container_name: ot-node9
+    network_mode: host
+    command: ["/openthread/build/examples/apps/cli/ot-cli-ftd", "9"]
+    tty: true
+    stdin_open: true
+  node10:
+    image: openthread/environment:latest
+    container_name: ot-node10
+    network_mode: host
+    command: ["/openthread/build/examples/apps/cli/ot-cli-ftd", "10"]
+    tty: true
+    stdin_open: true
+  node11:
+    image: openthread/environment:latest
+    container_name: ot-node11
+    network_mode: host
+    command: ["/openthread/build/examples/apps/cli/ot-cli-ftd", "11"]
+    tty: true
+    stdin_open: true
+  node12:
+    image: openthread/environment:latest
+    container_name: ot-node12
+    network_mode: host
+    command: ["/openthread/build/examples/apps/cli/ot-cli-ftd", "12"]
+    tty: true
+    stdin_open: true
+  node13:
+    image: openthread/environment:latest
+    container_name: ot-node13
+    network_mode: host
+    command: ["/openthread/build/examples/apps/cli/ot-cli-ftd", "13"]
+    tty: true
+    stdin_open: true
