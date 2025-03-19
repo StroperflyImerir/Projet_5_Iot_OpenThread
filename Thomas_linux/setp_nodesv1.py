@@ -92,7 +92,7 @@ def get_eui64(container_name, prompt=">"):
 def add_joiner(leader, joiner_eui, retries=3):
     """Ajoute un joiner depuis le leader, avec retry en cas d'erreur de type NoBufs."""
     for attempt in range(retries):
-        time.sleep(2)
+        time.sleep(3)
         print(f"🛠 Tentative {attempt+1} pour ajouter le joiner {joiner_eui} depuis ot-node1...")
         output = send_cmd(leader, f"commissioner joiner add {joiner_eui} THREAD 60", wait=3)
         if "NoBufs" in output:

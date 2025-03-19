@@ -18,13 +18,12 @@ def get_state(container_name, prompt=">"):
       Done
     On renvoie donc la ligne juste avant "Done" (par exemple "router").
     """
-    # print(f"🔍 Vérification de l'état de {container_name}...")
     try:
         proc = pexpect.spawn(f"docker attach {container_name}", timeout=30)
     except Exception as e:
         print(f"Erreur lors de l'attachement à {container_name}: {e}")
         return None
-    
+
     proc.sendline("")
     try:
         proc.expect(prompt, timeout=10)
@@ -48,14 +47,13 @@ def get_state(container_name, prompt=">"):
         state_val = lines[-2].strip()
     elif lines:
         state_val = lines[0].strip()
-    # print(f"🔹 {container_name} état: {state_val}")
     return state_val
 
 def main():
-    # Générer la liste des conteneurs (exemple : ot-node1 à ot-node10)
+    # Générer la liste des conteneurs (exemple : ot-node1 à ot-nodeN)
     containers = [f"ot-node{i}" for i in range(1, nb_nodes+1)]
     state_dict = {}
-    
+
     # Récupérer les états en parallèle
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
         future_to_container = {executor.submit(get_state, container): container for container in containers}
@@ -66,9 +64,10 @@ def main():
                 state_dict[container] = state
             except Exception as exc:
                 state_dict[container] = f"Erreur: {exc}"
-    
+
     print("\n🎉 État simplifié de tous les nœuds :")
-    for container, state in state_dict.items():
+    # Tri par ordre numérique en extrayant le nombre après "ot-node"
+    for container, state in sorted(state_dict.items(), key=lambda kv: int(kv[0][len("ot-node"):])):
         print(f"{container}: {state}")
 
 if __name__ == "__main__":
