@@ -5,20 +5,28 @@ import os
 import math
 import re
 import sys
+import datetime
 
 LOG_FILENAME = "otns_log.txt"
 
 class TeeLogger:
     def __init__(self, file_obj):
         self.file_obj = file_obj
+
     def write(self, data):
         # Si data est en bytes, le décoder en utf-8 (avec remplacement en cas d'erreur)
         if isinstance(data, bytes):
             data = data.decode("utf-8", errors="replace")
-        sys.stdout.write(data)
-        self.file_obj.write(data)
+        # Découper data en lignes et préfixer chaque ligne par un timestamp
+        lines = data.splitlines(keepends=True)
+        for line in lines:
+            ts = datetime.datetime.now().strftime("[%Y-%m-%d %H:%M:%S] ")
+            # Écrire dans la console et dans le fichier
+            sys.__stdout__.write(ts + line)
+            self.file_obj.write(ts + line)
+
     def flush(self):
-        sys.stdout.flush()
+        sys.__stdout__.flush()
         self.file_obj.flush()
 
 def send_cmd(proc, cmd, wait=0.5):
@@ -63,17 +71,12 @@ def generate_row_topology(proc, row_y, num_routers, fed_total, delta_x,
 
 def get_node_ipaddr(proc):
     """
-    Exécute la commande ipaddr et renvoie la sortie.
-    On extrait ici l'adresse souhaitée (par exemple, l'EID).
+    Exécute la commande ipaddr et renvoie la liste des adresses IPv6 extraites.
+    On extrait ici les adresses (par exemple, EID ou RLOC) via une regex.
     """
     output = send_cmd(proc, "ipaddr", wait=1)
     addrs = re.findall(r"([0-9a-fA-F:]{20,})", output)
-    if addrs:
-        for addr in addrs:
-            if "ff:fe00" not in addr:
-                return addr.strip()
-        return addrs[0].strip()
-    return None
+    return addrs
 
 def ping_async(proc, addr, size, count, interval):
     """
@@ -85,9 +88,12 @@ def ping_async(proc, addr, size, count, interval):
 
 def main():
     os.chdir(os.path.expanduser("~/otns"))
-    # Ouvrir le fichier de log en mode écrasement
+    # Ouvrir le fichier de log en mode écrasement (ou "a" pour conserver les anciens logs)
     with open(LOG_FILENAME, "w") as log_file:
         tee = TeeLogger(log_file)
+        # Rediriger sys.stdout pour capturer tous les prints dans le log
+        sys.stdout = tee
+
         print("Starting OTNS...")
         # Lancer OTNS en mode debug et rediriger la sortie vers le TeeLogger
         proc = pexpect.spawn('otns -log debug', encoding='utf-8', timeout=30)
@@ -98,6 +104,7 @@ def main():
         fed_total = 6
         delta_x = 150
         base_y = 250
+        
         generate_row_topology(proc,
                               row_y=base_y,
                               num_routers=num_routers,
@@ -105,22 +112,31 @@ def main():
                               delta_x=delta_x,
                               pattern_first=[1,2,3,4,5],
                               pattern_intermediate=[1,5],
-                              pattern_last=[1,5])
+                              pattern_last=[0,1,5])
         
         print("Topologie générée.")
         time.sleep(2)
         
-        # # Exemple : récupération d'une adresse IP sur node 2 et ping async depuis node 1
-        # send_cmd(proc, "node 2", wait=1)
-        # node2_addr = get_node_ipaddr(proc)
-        # if node2_addr is None:
-        #     print("Erreur : impossible de récupérer l'adresse de node 2")
-        # else:
-        #     print(f"Adresse de node 2 récupérée : {node2_addr}")
+        # Récupérer et afficher l'adresse IPv6 de chaque node
+        # node_ips = {}
+        # for i in range(1, num_routers + 1):
+        #     send_cmd(proc, f"node {i}", wait=1)
+        #     addrs = get_node_ipaddr(proc)
+        #     node_ips[i] = addrs
+        #     print(f"Node {i} adresses IPv6 : {addrs}")
         
-        # send_cmd(proc, "node 1", wait=1)
-        # ping_result = ping_async(proc, node2_addr, 32, 10, 1)
-        # print(f"Résultat du ping async : {ping_result}")
+        # for i in range(1, num_routers + 1):
+        #     print(f"Node {i} adresses IPv6 : {node_ips[i]}")
+        
+        # # Exemple : envoyer un ping asynchrone du node 1 vers node 2 en utilisant la première adresse de node 2
+        # if 2 in node_ips and node_ips[2]:
+        #     target_addr = node_ips[2][0]
+        #     print(f"\nEnvoi d'un ping asynchrone depuis node 1 vers node 2 ({target_addr})")
+        #     send_cmd(proc, "node 1", wait=1)
+        #     ping_result = ping_async(proc, target_addr, 32, 10, 1)
+        #     print(f"Résultat du ping async : {ping_result}")
+        # else:
+        #     print("Aucune adresse trouvée pour node 2.")
         
         print("Fin du script. La session OTNS reste interactive. Tapez 'exit' pour quitter.")
         proc.interact()
