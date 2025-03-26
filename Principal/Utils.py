@@ -2,19 +2,60 @@
 
 import time
 import re
+import pexpect
+import sys
 
 #==============================================================================================
 # Envoi de commandes à OTNS
 
-def send_cmd(proc, cmd, wait=0.5):
-    """Envoie une commande à OTNS, affiche la commande, attend le prompt '>' et renvoie la sortie."""
-    print(f"\n[Envoi] {cmd}")
-    proc.sendline(cmd)
-    proc.expect('>')
-    time.sleep(wait)
-    output = proc.before
-    print(f"[Réponse] {output}")
-    return output
+def send_cmd(proc, cmd, timeout=5, retries=2):
+    """
+    Send a command to the OTNS process and return the output.
+    Includes retry logic and better error handling.
+    """
+    for attempt in range(retries + 1):
+        try:
+            print(f"\n[Envoi] aaaaaaaaaaaaa : {cmd}")
+            sys.stdout.flush()
+            proc.sendline(cmd)
+            print("dexuieme ligne")
+            sys.stdout.flush()
+            proc.expect('>', timeout=timeout)
+            print("troisieme ligne")
+            sys.stdout.flush()
+            output = proc.before.strip()
+            print("[Réponse] bbbbbbbbbbbbb : " + output)
+            sys.stdout.flush()
+            
+            # Debug: afficher la longueur et le contenu brut de proc.before
+            print("DEBUG: proc.before repr =", repr(proc.before))
+            sys.stdout.flush()
+            
+            # If we're expecting a node ID, add extra validation
+            if cmd.startswith("add"):
+                time.sleep(0.5)  # Give a bit more time for the complete response
+                proc.sendline("")  # Send an empty line to get a fresh prompt
+                proc.expect('>', timeout=1)
+                additional_output = proc.before.strip()
+                print("DEBUG: additional_output =", additional_output)
+                sys.stdout.flush()
+                if additional_output and re.search(r'\d+', additional_output):
+                    output += "\n" + additional_output
+            
+            return output
+        except pexpect.TIMEOUT:
+            print(f"Command timed out (attempt {attempt+1}/{retries+1}): {cmd}")
+            sys.stdout.flush()
+            if attempt == retries:
+                return "TIMEOUT"
+        except pexpect.EOF:
+            print(f"EOF encountered while executing command: {cmd}")
+            sys.stdout.flush()
+            return "EOF"
+        except Exception as e:
+            print(f"Error executing command '{cmd}': {e}")
+            sys.stdout.flush()
+            return "ERROR"
 
 #==============================================================================================
 # Récupération de l'adresse IP d'un noeud
@@ -46,10 +87,40 @@ def ping_async(proc, addr, size, count, interval):
 # Extraction de l'ID d'un noeud
 
 def extract_node_id(output):
-    """Extrait l'ID du nœud créé à partir de la sortie de la commande add"""
-    match = re.search(r"Added (?:router|fed) with nodeid=(\d+)", output)
+    """
+    Extract node ID from OTNS output.
+    The output format from OTNS seems to be sometimes inconsistent.
+    """
+    if not output:
+        return None
+    
+    # Debug print to see exactly what we're getting
+    print(f"DEBUG - Raw output: '{output}'")
+    
+    # Clean the output by removing any control characters
+    cleaned_output = re.sub(r'[\x00-\x1F\x7F-\x9F]', '', output)
+    
+    # Look for a pattern where a number appears alone on a line
+    lines = cleaned_output.strip().split('\n')
+    for line in lines:
+        line = line.strip()
+        if line and line.isdigit():
+            print(f"Found ID: {line}")
+            return int(line)
+    
+    # If not found that way, try with regex to find any digit sequence
+    match = re.search(r'(?:^|\n)\s*(\d+)\s*(?:\n|$)', cleaned_output)
     if match:
+        print(f"Found ID via regex: {match.group(1)}")
         return int(match.group(1))
+        
+    # Try one more pattern - sometimes the ID might be after specific text
+    match = re.search(r'Done\s*(\d+)', cleaned_output)
+    if match:
+        print(f"Found ID after 'Done': {match.group(1)}")
+        return int(match.group(1))
+    
+    print(f"WARNING: Failed to extract node ID from output: '{output}'")
     return None
 
 #==============================================================================================
